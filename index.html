@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+    <meta http-equiv="Content-Type" content="text/html"; charset="UTF-8"/>
+    <link rel="stylesheet" type="text/css" href="style.css">
+	<link href='http://fonts.googleapis.com/css?family=Alegreya+Sans:400,500,800' rel='stylesheet' type='text/css'>
+    <title>JoAnn Klein's Project</title>
+    
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+	<link rel="stylesheet" href="leaflet.css" />
+
+	<style>
+	    body {font-family: 'Alegreya Sans', sans-serif;}
+		
+		#map {
+			width: 800px;
+			height: 500px;
+		}
+
+		.info {
+			padding: 6px 8px;
+			font: 14px/16px Arial, Helvetica, sans-serif;
+			background: white;
+			background: rgba(255,255,255,0.8);
+			box-shadow: 0 0 15px rgba(0,0,0,0.2);
+			border-radius: 5px;
+		}
+		.info h4 {
+			margin: 0 0 5px;
+			color: #777;
+		}
+
+		.legend {
+			text-align: left;
+			line-height: 18px;
+			color: #555;
+		}
+		.legend i {
+			width: 18px;
+			height: 18px;
+			float: left;
+			margin-right: 8px;
+			opacity: 0.7;
+		}
+	</style>
+</head>
+<body>
+	<div class="header-info">
+		<h1 align="center">Who will take care of America's Grandmothers?</h1> 
+		<h2 align="center" class="kicker">Getting around is the biggest disability for elderly women over the age of 65. </h2>
+		<div class="meta-container">
+			<h3 align="center" class="meta-info byline">By <a class="author" href="https://twitter.com/nonojojo">JoAnna Klein</a></h3>
+			<h4 align="center" class="meta-info date">April 29, 2015</h4>
+		</div>
+
+		
+	</div>
+	<div class="article">
+		<p>The lede will describe the growing problem of an aging American population. It will zero in on ambulatory disability:Trouble walking or climbing stairs is the number one reported disability for elderly over the age of 65. And the problems is worse for women: The percentage of those reporting ambulatory disability is on average 1.4 times greater for women than men. In other words, for every three men reporting trouble walking or climbing stairs, four women will report the same. The bigger issue is that women live longer than their men, and a number end up widowed, alone or impoverished. Who will be there to help them around?</p>
+
+		<p>This section will describe what I did. I took data from the 2012 American Community Demographic Survey. It's part of the census. I looked only at the population of (literally "grandparents") in non-institutionalized settings because then I wouldn't have to worry about prison or mental institutions or any of that biz. I took my data, mixed it up, threw it down and flipped it like a pancake. </p>
+
+		<p>I first noticed the percentage of ambulatory disabilites in women was greater than that in men. So I thought I'd make a ratio map of it. But it was useless: In every single state, I saw the same pattern: more women, less men. And there were't any stand out states. So I zeroed in on my girls and started seeing some trends. So I mapped them.</p>
+
+  
+	<div id="map"></div>
+
+	<script src="leaflet.js"></script>
+
+	<script align="center" type="text/javascript" src="us-states-women.js"></script>
+	<script type="text/javascript">
+
+		var map = L.map('map').setView([37.8, -96], 4);
+
+		L.tileLayer('https://{s}.tiles.mapbox.com/v3/{id}/{z}/{x}/{y}.png', {
+			maxZoom: 18,
+			attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, ' +
+				'<a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, ' +
+				'Imagery © <a href="http://mapbox.com">Mapbox</a>',
+			id: 'examples.map-20v6611k'
+		}).addTo(map);
+
+
+		// control that shows state info on hover
+		var info = L.control();
+
+		info.onAdd = function (map) {
+			this._div = L.DomUtil.create('div', 'info');
+			this.update();
+			return this._div;
+		};
+
+		info.update = function (props) {
+			this._div.innerHTML = '<h4>Percent of Elderly Women with Ambulatory Disability</h4>' +  (props ?
+				'<b>' + props.name + '</b><br>' + props.density + ' percent'
+				: 'Hover over a state');
+		};
+
+		info.addTo(map);
+
+
+		// get color depending on population density value
+		function getColor(d) {
+			return d > 30  ? '#0c2c84' :
+			       d > 28  ? '#225ea8' :
+			       d > 26 ? '#1d91c0' :
+			       d > 24  ? '#41b6c4' :
+			       d > 22  ? '#7fcdbb' :
+			       d > 20 ? '#c7e9b4' :
+			       d > 15   ? '#ffffcc' :
+			                  '#FFEDA0';
+
+
+		}
+
+		function style(feature) {
+			return {
+				weight: 2,
+				opacity: 1,
+				color: 'white',
+				dashArray: '3',
+				fillOpacity: 1.0,
+				fillColor: getColor(feature.properties.density)
+			};
+		}
+
+		function highlightFeature(e) {
+			var layer = e.target;
+
+			layer.setStyle({
+				weight: 5,
+				color: '#666',
+				dashArray: '',
+				fillOpacity: 0.7
+			});
+
+			if (!L.Browser.ie && !L.Browser.opera) {
+				layer.bringToFront();
+			}
+
+			info.update(layer.feature.properties);
+		}
+
+		var geojson;
+
+		function resetHighlight(e) {
+			geojson.resetStyle(e.target);
+			info.update();
+		}
+
+		function zoomToFeature(e) {
+			map.fitBounds(e.target.getBounds());
+		}
+
+		function onEachFeature(feature, layer) {
+			layer.on({
+				mouseover: highlightFeature,
+				mouseout: resetHighlight,
+				click: zoomToFeature
+			});
+		}
+
+		geojson = L.geoJson(statesData, {
+			style: style,
+			onEachFeature: onEachFeature
+		}).addTo(map);
+
+		map.attributionControl.addAttribution('Population data &copy; <a href="http://census.gov/">US Census Bureau</a>');
+
+
+		var legend = L.control({position: 'bottomright'});
+
+		legend.onAdd = function (map) {
+
+			var div = L.DomUtil.create('div', 'info legend'),
+				grades = [15, 20, 22, 24, 26, 28, 30],
+				labels = [],
+				from, to;
+
+			for (var i = 0; i < grades.length; i++) {
+				from = grades[i];
+				to = grades[i + 1];
+
+				labels.push(
+					'<i style="background:' + getColor(from + .1) + '"></i> ' +
+					from + (to ? '&ndash;' + to : '+'));
+			}
+
+			div.innerHTML = labels.join('<br>');
+			return div;
+		};
+
+		legend.addTo(map);
+
+	</script>
+
+	<h3 align="center" class="subhed">Wow. Our grandmothers are really not doing so well down south. </h3>
+
+	<p>I needed more data. What was going on? I looked at how the women faired in the states with the highest female-reported ambulatory disabilities. Compared to other states, were there more widows? More living alone? More grandmothers unable to afford care? For the most part, the answer was yes, pretty much across the board. </p>
+	
+	<h3 align="center" class="subhed">These six states almost always topped the charts in these areas. </h3>
+
+    <p>This section will discuss what disparities women in the top six states for reported ambulatory disabilities face. Compared with others (and maybe I need a z-score) women over the age of 65 in the United States are windowed, living alone, or living alone below poverty. So husbands won't help. Caretakers will have to come to the house, or they'll have to go to a nursing home. And for those without money for that, the burden likely rests on children, family members or neighbors. Ideally I'd make a table with graded colors to reflect the percentages for each variable. Then the reader can search for hotspots.</p>
+	</div>
+
+	<h3 align="center" class="subhed">The Most Immobile, Broken Down</h3>
+
+
+    <table align="center" class="example-table">
+      <thead>
+        <tr>
+          <th class="state-cell">State</th>
+          <th class="Percent Widowed-cell">Percent Widowed</th>
+          <th class="Percent Alone-cell">Percent Alone</th>
+          <th class="PA Below Poverty-cell">PA Below Poverty</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="firstRow">
+          <td class="state-cell">Puerto Rico</td>
+          <td class="Percent Widowed-cell">39.03</td>
+          <td class="Percent Alone-cell">28.15</td>
+          <td class="PA Below Poverty-cell">17.91</td>
+        </tr>
+        <tr>
+          <td class="state-cell">Mississippi</td>
+          <td class="Percent Widowed-cell">43.51</td>
+          <td class="Percent Alone-cell">36.15</td>
+          <td class="PA Below Poverty-cell">10.36</td>
+        </tr>
+        <tr>
+          <td class="state-cell">Louisiana</td>
+          <td class="Percent Widowed-cell">40.30</td>
+         <td class="Percent Alone-cell">35.73</td>
+          <td class="PA Below Poverty-cell">9.61</td>
+        </tr>
+        <tr>
+          <td class="state-cell">Alabama</td>
+          <td class="Percent Widowed-cell">40.59</td>
+          <td class="Percent Alone-cell">35.91</td>
+          <td class="PA Below Poverty-cell">9.1</td>
+        </tr>
+        <tr>
+          <td class="state-cell">West Virginia</td>
+          <td class="Percent Widowed-cell">42.59</td>
+          <td class="Percent Alone-cell">39.35</td>
+          <td class="PA Below Poverty-cell">7.25</td>
+        </tr>
+        <tr>
+          <td class="state-cell">Kentucky</td>
+          <td class="Percent Widowed-cell">39.58</td>
+          <td class="Percent Alone-cell">36.2</td>
+          <td class="PA Below Poverty-cell">8.95</td>
+        </tr>
+      </tbody>
+    </table>
+
+  </div>
+  	<p>Perhaps this is where I report out my findings to see if there is anything besides the variables I had access to that might be feeding the problem.
+  	</p>
+  	<p>This is my conclusion.
+  	</p>
+</div>
+
+
+</body>
+</html>
